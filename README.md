@@ -11,7 +11,7 @@ It links:
 - **technology-specific damage and downtime assessment**
 - **economic loss analysis and adaptation planning**
 
-Unlike conventional hazard-only assessments, CRISES translates projected TC climatology changes into **engineering consequences**, **generation losses**, **economic losses**, and **economically optimal adaptation strategies** for future VRE deployment.
+CRISES translates projected TC climatology changes into **engineering consequences**, **generation losses**, **economic losses**, and **economically optimal adaptation strategies** for future VRE deployment.
 
 ---
 
