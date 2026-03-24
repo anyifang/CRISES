@@ -59,16 +59,5 @@ It further identifies **economically optimal design wind speeds** through cost�
 ---
 
 ## Workflow
+<img width="4216" height="6495" alt="fig1" src="https://github.com/user-attachments/assets/a6652f79-e563-42a8-93df-094cd4dca47b" />
 
-```text
-Climate fields (ERA5 + CMIP6)
-        ↓
-Physics-based TC downscaling
-        ↓
-High-resolution TC wind fields
-        ↓
-Damage / downtime modelling for wind and PV
-        ↓
-Spatially resolved VRE layout from power-system optimization
-        ↓
-Generation loss + economic loss + adaptation benefits
