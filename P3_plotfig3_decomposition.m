@@ -6,12 +6,17 @@
 % *UPDATED* to fully support separate UPV and DPV downtime fragility.
 close all;
 clear
+repoDir = fileparts(mfilename('fullpath'));
+derivedDir = fullfile(repoDir,'output','derived');
+figureDir = fullfile(repoDir,'output','figures');
+if ~exist(figureDir,'dir'), mkdir(figureDir); end
 nScen = 7;
-load('VRE_hist_filtered.mat', 'VRE_hist');   % 历史
-load('VRE_near_filtered.mat', 'VRE_near');   % 近期未来
-load('VRE_far_filtered.mat',  'VRE_far');    % 远期未来
 tech_list  = {'onshore','offshore','dpv','upv'};
-load('All_VRE_Data_Combined.mat')
+combinedFile = fullfile(derivedDir,'All_VRE_Data_Combined.mat');
+assert(isfile(combinedFile), ...
+    'Run P3_downtime_on_VRE.m first. Missing file: %s', combinedFile);
+load(combinedFile,'VRE_hist','VRE_near','VRE_far', ...
+    'VRE_hist_dt','VRE_near_dt','VRE_far_dt');
 
 %% ===================== Compute Total Losses for Fig 3.1 (GW) =====================
 % We must re-calculate the total loss per scenario to plot Fig 3.1(a)
@@ -26,10 +31,10 @@ for s = 1:nScen
     else, V = VRE_far; dtm = VRE_far_dt; end
     
     dt_frac = dtm(:,s) / 100;
-    Loss_onshore_GW(s)  = nansum( V.cap_GW(V.tech=="onshore")  .* dt_frac(V.tech=="onshore")  );
-    Loss_offshore_GW(s) = nansum( V.cap_GW(V.tech=="offshore") .* dt_frac(V.tech=="offshore") );
-    Loss_dpv_GW(s)      = nansum( V.cap_GW(V.tech=="dpv")      .* dt_frac(V.tech=="dpv") );
-    Loss_upv_GW(s)      = nansum( V.cap_GW(V.tech=="upv")      .* dt_frac(V.tech=="upv") );
+    Loss_onshore_GW(s)  = sum(V.cap_GW(V.tech=="onshore").*dt_frac(V.tech=="onshore"),'omitnan');
+    Loss_offshore_GW(s) = sum(V.cap_GW(V.tech=="offshore").*dt_frac(V.tech=="offshore"),'omitnan');
+    Loss_dpv_GW(s)      = sum(V.cap_GW(V.tech=="dpv").*dt_frac(V.tech=="dpv"),'omitnan');
+    Loss_upv_GW(s)      = sum(V.cap_GW(V.tech=="upv").*dt_frac(V.tech=="upv"),'omitnan');
 end
 
 %% ===================== Compute attribution fractions (by tech, for Fig3.2 b–e) =====================
@@ -41,6 +46,7 @@ nFut = numel(future_idx);
 dLoss_TC_tech  = nan(nTech, nFut);
 dLoss_exp_tech = nan(nTech, nFut);
 dLoss_int_tech = nan(nTech, nFut);
+decomposition_residual = nan(nTech,nFut);
 
 keyDigits = 4; 
 makeKey = @(lon,lat) string(compose("%."+keyDigits+"f_%."+keyDigits+"f", round(lon, keyDigits), round(lat, keyDigits)));
@@ -81,28 +87,45 @@ for jf = 1:nFut
         
         D0u(~isfinite(D0u)) = 0; D1u(~isfinite(D1u)) = 0;
         
-        dC = (C1u - C0u); dD = (D1u - D0u);
-        dL_TC  = nansum( C0u .* dD );        
-        dL_exp = nansum( D0u .* dC );        
-        dL_int = nansum( dC  .* dD );        
+        % Manuscript notation: exposure E = installed capacity C, while
+        % hazard H = annual downtime ratio D. The following is exactly
+        % E0*(H1-H0) + H0*(E1-E0) + (E1-E0)*(H1-H0).
+        E0 = C0u; E1 = C1u;
+        H0 = D0u; H1 = D1u;
+        dE = E1-E0; dH = H1-H0;
+        dL_TC  = sum(E0.*dH,'omitnan');   % hazard effect
+        dL_exp = sum(H0.*dE,'omitnan');   % exposure effect
+        dL_int = sum(dE.*dH,'omitnan');   % synergistic effect
         
         dLoss_TC_tech(ti, jf)  = dL_TC;
         dLoss_exp_tech(ti, jf) = dL_exp;
         dLoss_int_tech(ti, jf) = dL_int;
+        decomposition_residual(ti,jf) = ...
+            sum(E1.*H1,'omitnan')-sum(E0.*H0,'omitnan')-(dL_TC+dL_exp+dL_int);
     end
 end
+assert(max(abs(decomposition_residual),[],'all') < 1e-9, ...
+    'Hazard-exposure-synergy decomposition does not close numerically.');
 
-% Convert to stacked positive shares (%)
-TC_pos  = max(dLoss_TC_tech,  0);
-EXP_pos = max(dLoss_exp_tech, 0);
-INT_pos = max(dLoss_int_tech, 0);
-den = TC_pos + EXP_pos + INT_pos;
-den_safe = max(den, eps);
-frac_TC_tech  = 100 * TC_pos  ./ den_safe;
-frac_exp_tech = 100 * EXP_pos ./ den_safe;
-frac_int_tech = 100 * INT_pos ./ den_safe;
-zeroMask = (den <= 0);
-frac_TC_tech(zeroMask)  = NaN; frac_exp_tech(zeroMask) = NaN; frac_int_tech(zeroMask) = NaN;
+% Contribution percentages for each technology. The denominator is the
+% total increase in loss, not the future total loss.
+dLoss_total_tech = dLoss_TC_tech+dLoss_exp_tech+dLoss_int_tech;
+assert(all(dLoss_total_tech>0,'all'), ...
+    'A non-positive loss increment requires signed rather than stacked shares.');
+frac_TC_tech  = 100*dLoss_TC_tech ./dLoss_total_tech;
+frac_exp_tech = 100*dLoss_exp_tech./dLoss_total_tech;
+frac_int_tech = 100*dLoss_int_tech./dLoss_total_tech;
+
+% Contributions aggregated over all four VRE technologies.
+dLoss_TC_all  = sum(dLoss_TC_tech,1);
+dLoss_exp_all = sum(dLoss_exp_tech,1);
+dLoss_int_all = sum(dLoss_int_tech,1);
+dLoss_total_all = dLoss_TC_all+dLoss_exp_all+dLoss_int_all;
+frac_TC_all  = 100*dLoss_TC_all ./dLoss_total_all;
+frac_exp_all = 100*dLoss_exp_all./dLoss_total_all;
+frac_int_all = 100*dLoss_int_all./dLoss_total_all;
+assert(max(abs(frac_TC_all+frac_exp_all+frac_int_all-100))<1e-10, ...
+    'Overall contribution percentages do not sum to 100%%.');
 
 %% ------------------------------ Labels ------------------------------
 tech_label = {'Onshore wind','Offshore wind','Distributed PV','Utility-scale PV'};
@@ -125,7 +148,6 @@ baseTot   = sum(Loss_tot_mat(baseRow,:));
 ratioTech = Loss_tot_mat ./ max(baseTech, eps);   
 ratioTot  = sum(Loss_tot_mat,2) ./ max(baseTot, eps);
 outlineColor = repmat([0.55 0.55 0.55], nScen, 1);
-useLogRatioAxis = true;
 
 %% ------------------------------ Fig3.2 data & Layout ------------------------------
 col_synergy = [214, 40, 40]/255;
@@ -180,8 +202,8 @@ hTot = plot(ax1, NaN, NaN, mkTot, 'LineStyle','none', 'MarkerSize', msTot, 'Mark
 
 allR = [ratioTech(:); ratioTot(:)]; allR = allR(isfinite(allR) & allR>0);
 xmin = max(min(allR)*0.90, 1e-3); xmax = max(allR)*1.20;
-if useLogRatioAxis, ax2.XScale = 'log'; xlim(ax2, [xmin xmax]);
-else, ax2.XScale = 'linear'; xlim(ax2, [xmin xmax]); end
+ax2.XScale = 'log';
+xlim(ax2,[xmin xmax]);
 
 text(ax1, -0.05, 1.05, 'a', 'Units','normalized', 'FontWeight','bold','FontSize',24, 'HorizontalAlignment','left');
 
@@ -234,4 +256,22 @@ lgdB = legend(axAttr(4), [bh(1) bh(2) bh(3)], {'Hazard effect','Exposure effect'
 lgdB.Position = [X2+1*(W_panel+gap)+0.06, Y2+H2+0.02, 0.3, 0.03]; 
 
 %% Export
-exportgraphics(gcf,'Fig3_Combined_Layout.png','Resolution',300);
+figFile = fullfile(figureDir,'Fig3_Combined_Layout.png');
+exportgraphics(gcf,figFile,'Resolution',300);
+
+futureScenarioNames = {'N-SSP1-2.6','N-SSP2-4.5','N-SSP5-8.5', ...
+                       'F-SSP1-2.6','F-SSP2-4.5','F-SSP5-8.5'};
+T_overall_contribution = table(string(futureScenarioNames(:)), ...
+    dLoss_TC_all(:),dLoss_exp_all(:),dLoss_int_all(:),dLoss_total_all(:), ...
+    frac_TC_all(:),frac_exp_all(:),frac_int_all(:), ...
+    'VariableNames',{'Scenario','Hazard_GW','Exposure_GW','Synergy_GW', ...
+    'TotalIncrease_GW','Hazard_pct','Exposure_pct','Synergy_pct'});
+writetable(T_overall_contribution, ...
+    fullfile(derivedDir,'Fig3_overall_contribution_percentages.csv'));
+decompositionFile = fullfile(derivedDir,'Fig3_decomposition.mat');
+save(decompositionFile,'dLoss_TC_tech','dLoss_exp_tech','dLoss_int_tech', ...
+    'dLoss_TC_all','dLoss_exp_all','dLoss_int_all','dLoss_total_all', ...
+    'frac_TC_tech','frac_exp_tech','frac_int_tech', ...
+    'frac_TC_all','frac_exp_all','frac_int_all','T_overall_contribution', ...
+    'decomposition_residual','tech_list','futureScenarioNames');
+fprintf('Fig. 3 completed.\n  %s\n  %s\n',figFile,decompositionFile);
