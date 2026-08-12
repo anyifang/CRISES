@@ -94,7 +94,7 @@ for i = 1:length(st_time)
     if r < Rmax
         beta = 10 * (1 + r / Rmax);
     elseif r < 1.2 * Rmax
-        beta = 20 + 25 * r / Rmax - 1;
+        beta = 20 + 25 * (r / Rmax - 1);
     else
         beta = 25;
     end
