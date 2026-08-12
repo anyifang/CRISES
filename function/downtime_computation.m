@@ -78,7 +78,7 @@ sum_s_wl25  = zeros(nScenState, num_points, 'single');
 sum_s_ih    = zeros(nScenState, num_points, 'single');  
 
 % constants
-ampl_on  = single((80/10)^(1/7));  % single((80/10)^(1/7)) *0.7 /0.85
+ampl_on  = single((80/10)^(1/7));  
 ampl_off = single((90/10)^(1/9));
 eps1     = eps('single');
 
