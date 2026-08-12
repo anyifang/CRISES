@@ -85,7 +85,7 @@ eps1     = eps('single');
 % PV Parameters (Ceferino et al., 2023)
 v_DPV       = single(48); % Median threshold (10 min )
 beta_DPV    = single(0.32); % Dispersion
-v_UPV       = single(54.0); % Median threshold (10 min )
+v_UPV       = single(54); % Median threshold (10 min )
 beta_UPV    = single(0.15); % Dispersion
 
 % =====================================================
