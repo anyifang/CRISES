@@ -4,6 +4,9 @@
 % 1. 成本计算升级为基于风压物理机制的平方差模型: Cost ~ lambda * [(Ud + dv)^2 - Ud^2]
 % 2. 参数 Ud (基础设计风速) 和 lambda (成本系数) 基于 IEC 标准和 Clausen/Rose/Emes 等文献标定。
 % 3. Project_Life = 25 years and Discount_Rate = 4%.
+% The restoration multiplier (M_r) controls the expected restoration duration relative to the proactive case. 
+% In the implementation, the corresponding delay factor is defined as (M_r-1), such that (M_r=1), 2, and 4 yield 
+% expected restoration durations of one, two, and four times the proactive value, respectively.
 
 clear; close all;
 repoDir = fileparts(mfilename('fullpath'));
