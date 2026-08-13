@@ -93,7 +93,7 @@ for i = 1:10
                         wind_result(n).maxwind(s) =  max(model_wind);
                         wind_result(n).Vmax(s) =  Vmaxi;
                         wind_result(n).Ih_I_ratio(s) =  sum(Ih_I_ratio);
-                        wind_result(n).wind_larger25(s) =  sum(model_wind>25 /1.2); % 25/1.2 10m -> grad
+                        wind_result(n).wind_larger25(s) =  sum(model_wind>25 /1.2); % 25/1.2 10m -> hub approximate
                     else
                         wind_result(n).maxwind(s) =  0;
                         wind_result(n).Vmax(s) =  0;
