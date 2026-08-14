@@ -58,7 +58,7 @@ It further identifies **economically optimal design wind speeds** through costâ€
 
 ---
 
-data file can be download from https://zenodo.org/records/21881474
+**files in data folder can be download from** https://zenodo.org/records/21881474
 
 ## Workflow
 <img width="4216" height="6495" alt="fig1" src="https://github.com/user-attachments/assets/a6652f79-e563-42a8-93df-094cd4dca47b" />
