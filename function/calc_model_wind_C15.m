@@ -103,8 +103,8 @@ for i = 1:length(st_time)
     vmoc = vmc * r * Rmax / (r^2 + Rmax^2) ;
     %vmoc = vmc ;
     % Powell修正
-    Vx_TC = 0.85 * vg * cosd(cta + 90 + beta) + vmoc * cosd(fai);
-    Vy_TC = 0.85 * vg * sind(cta + 90 + beta) + vmoc * sind(fai);
+    Vx_TC = 0.85 * vg * cosd(cta + 90 + beta) + vmoc * cosd(fai);  % 0.85: site-scale wind attenuation factor (terrain/roughness for onshore; wind-farm aerodynamic effects for offshore)
+    Vy_TC = 0.85 * vg * sind(cta + 90 + beta) + vmoc * sind(fai);  
     Vx_TC = 0.893 * Vx_TC; % 1min-> 10min
     Vy_TC = 0.893 * Vy_TC;
 
