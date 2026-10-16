@@ -103,8 +103,9 @@ for i = 1:length(st_time)
     vmoc = vmc * r * Rmax / (r^2 + Rmax^2) ;
     %vmoc = vmc ;
     % Powell修正
-    % 0.85: site-scale wind attenuation factor
+    % 0.85: site-scale wind reduction factor
     % https://agupubs.onlinelibrary.wiley.com/doi/10.1002/2016JD025297
+    % https://doi.org/10.1175/JAMC-D-23-0160.1
     Vx_TC = 0.85 * vg * cosd(cta + 90 + beta) + vmoc * cosd(fai);
     Vy_TC = 0.85 * vg * sind(cta + 90 + beta) + vmoc * sind(fai);  
     Vx_TC = 0.893 * Vx_TC; % 1min-> 10min
